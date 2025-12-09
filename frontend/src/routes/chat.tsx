@@ -1,106 +1,113 @@
-import { createFileRoute } from '@tanstack/react-router'
-import * as React from 'react'
-import { useState, useRef, useEffect } from 'react'
-import { sendMessage, initAgent, resetChat, getStatus, getScreenshot, type ScreenshotResponse } from '../api'
+import { createFileRoute } from '@tanstack/react-router';
+import * as React from 'react';
+import { useState, useRef, useEffect } from 'react';
+import {
+  sendMessage,
+  initAgent,
+  resetChat,
+  getStatus,
+  getScreenshot,
+  type ScreenshotResponse,
+} from '../api';
 
 export const Route = createFileRoute('/chat')({
   component: ChatComponent,
-})
+});
 
 interface Message {
-  id: string
-  role: 'user' | 'agent'
-  content: string
-  timestamp: Date
-  steps?: number
-  success?: boolean
+  id: string;
+  role: 'user' | 'agent';
+  content: string;
+  timestamp: Date;
+  steps?: number;
+  success?: boolean;
 }
 
 function ChatComponent() {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [initialized, setInitialized] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [screenshot, setScreenshot] = useState<ScreenshotResponse | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const screenshotFetchingRef = useRef(false)
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [screenshot, setScreenshot] = useState<ScreenshotResponse | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const screenshotFetchingRef = useRef(false);
 
   // 滚动到底部
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   // 检查初始化状态
   useEffect(() => {
     getStatus()
-      .then((status) => setInitialized(status.initialized))
-      .catch(() => setInitialized(false))
-  }, [])
+      .then(status => setInitialized(status.initialized))
+      .catch(() => setInitialized(false));
+  }, []);
 
   // 每 3 秒刷新截图
   useEffect(() => {
     const fetchScreenshot = async () => {
       // 如果有正在进行的请求，跳过本次请求
       if (screenshotFetchingRef.current) {
-        return
+        return;
       }
 
-      screenshotFetchingRef.current = true
+      screenshotFetchingRef.current = true;
       try {
-        const data = await getScreenshot()
+        const data = await getScreenshot();
         if (data.success) {
-          setScreenshot(data)
+          setScreenshot(data);
         }
       } catch (e) {
-        console.error('Failed to fetch screenshot:', e)
+        console.error('Failed to fetch screenshot:', e);
       } finally {
-        screenshotFetchingRef.current = false
+        screenshotFetchingRef.current = false;
       }
-    }
+    };
 
     // 立即获取一次
-    fetchScreenshot()
+    fetchScreenshot();
 
     // 设置定时器每 3 秒刷新
-    const interval = setInterval(fetchScreenshot, 3000)
+    const interval = setInterval(fetchScreenshot, 3000);
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => clearInterval(interval);
+  }, []);
 
   // 初始化 Agent
   const handleInit = async () => {
-    setError(null)
+    setError(null);
     try {
-      await initAgent()
-      setInitialized(true)
-    } catch (e) {
-      setError('初始化失败，请确保后端服务正在运行')
+      await initAgent();
+      setInitialized(true);
+    } catch {
+      setError('初始化失败，请确保后端服务正在运行');
     }
-  }
+  };
 
   // 发送消息
   const handleSend = async () => {
-    if (!input.trim() || loading) return
+    if (!input.trim() || loading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: input.trim(),
       timestamp: new Date(),
-    }
+    };
 
-    setMessages((prev) => [...prev, userMessage])
-    setInput('')
-    setLoading(true)
-    setError(null)
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
+    setError(null);
 
     try {
-      const response = await sendMessage(userMessage.content)
+      const response = await sendMessage(userMessage.content);
 
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -109,30 +116,30 @@ function ChatComponent() {
         timestamp: new Date(),
         steps: response.steps,
         success: response.success,
-      }
+      };
 
-      setMessages((prev) => [...prev, agentMessage])
-    } catch (e) {
-      setError('发送失败，请检查网络连接')
+      setMessages(prev => [...prev, agentMessage]);
+    } catch {
+      setError('发送失败，请检查网络连接');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // 重置对话
   const handleReset = async () => {
-    await resetChat()
-    setMessages([])
-    setError(null)
-  }
+    await resetChat();
+    setMessages([]);
+    setError(null);
+  };
 
   // 处理按键
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+      e.preventDefault();
+      handleSend();
     }
-  }
+  };
 
   return (
     <div className="h-full flex items-center justify-center p-4 gap-4">
@@ -179,7 +186,7 @@ function ChatComponent() {
             </div>
           )}
 
-          {messages.map((message) => (
+          {messages.map(message => (
             <div
               key={message.id}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -195,7 +202,9 @@ function ChatComponent() {
               >
                 <p className="whitespace-pre-wrap">{message.content}</p>
                 {message.role === 'agent' && message.steps !== undefined && (
-                  <p className="text-xs mt-2 opacity-70">执行步数: {message.steps}</p>
+                  <p className="text-xs mt-2 opacity-70">
+                    执行步数: {message.steps}
+                  </p>
                 )}
               </div>
             </div>
@@ -214,7 +223,9 @@ function ChatComponent() {
                     className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
                     style={{ animationDelay: '0.2s' }}
                   />
-                  <span className="ml-2 text-sm text-gray-500">正在执行任务...</span>
+                  <span className="ml-2 text-sm text-gray-500">
+                    正在执行任务...
+                  </span>
                 </div>
               </div>
             </div>
@@ -229,7 +240,7 @@ function ChatComponent() {
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={initialized ? '输入任务描述...' : '请先初始化 Agent'}
               disabled={!initialized || loading}
@@ -250,7 +261,9 @@ function ChatComponent() {
       <div className="flex flex-col w-full max-w-xs h-[600px] border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg bg-white dark:bg-gray-800 overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold">屏幕截图</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">每 3 秒自动刷新</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            每 3 秒自动刷新
+          </p>
         </div>
         <div className="flex-1 flex items-center justify-center p-4 overflow-auto bg-gray-50 dark:bg-gray-900">
           {screenshot && screenshot.success ? (
@@ -261,7 +274,8 @@ function ChatComponent() {
                 className="max-w-full max-h-full object-contain rounded-lg shadow-md"
                 style={{
                   width: screenshot.width > screenshot.height ? '100%' : 'auto',
-                  height: screenshot.width > screenshot.height ? 'auto' : '100%',
+                  height:
+                    screenshot.width > screenshot.height ? 'auto' : '100%',
                 }}
               />
               {screenshot.is_sensitive && (
@@ -284,5 +298,5 @@ function ChatComponent() {
         </div>
       </div>
     </div>
-  )
+  );
 }

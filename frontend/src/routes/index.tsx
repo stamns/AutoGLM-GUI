@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router';
+import { useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute('/')({
   component: HomeComponent,
 });
 
@@ -10,7 +10,7 @@ function HomeComponent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate({ to: "/chat" });
+    navigate({ to: '/chat' });
   }, [navigate]);
 
   return (
