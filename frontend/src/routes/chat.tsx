@@ -46,6 +46,7 @@ function ChatComponent() {
   const [showConfig, setShowConfig] = useState(false);
   const [useVideoStream, setUseVideoStream] = useState(true); // Try video stream first
   const [videoStreamFailed, setVideoStreamFailed] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'auto' | 'video' | 'screenshot'>('auto'); // User's manual choice
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const screenshotFetchingRef = useRef(false);
@@ -89,10 +90,13 @@ function ChatComponent() {
     initializeAgent();
   }, []);
 
-  // 截图轮询 (仅在 fallback 模式下运行)
+  // 截图轮询 (在 fallback 模式或用户手动选择截图模式时运行)
   useEffect(() => {
-    if (!videoStreamFailed) {
-      return; // Video stream is working, don't poll screenshots
+    const shouldPollScreenshots = displayMode === 'screenshot' ||
+      (displayMode === 'auto' && videoStreamFailed);
+
+    if (!shouldPollScreenshots) {
+      return; // Don't poll screenshots
     }
 
     const fetchScreenshot = async () => {
@@ -121,7 +125,7 @@ function ChatComponent() {
     const interval = setInterval(fetchScreenshot, 500);
 
     return () => clearInterval(interval);
-  }, [videoStreamFailed]);
+  }, [videoStreamFailed, displayMode]);
 
   // 初始化 Agent
   const handleInit = async () => {
@@ -453,12 +457,48 @@ function ChatComponent() {
       </div>
 
       {/* Real-time Video Stream or Screenshot Fallback */}
-      <div className="w-full max-w-xs h-[750px] border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg bg-gray-900 overflow-hidden">
-        {useVideoStream && !videoStreamFailed ? (
+      <div className="w-full max-w-xs h-[750px] border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg bg-gray-900 overflow-hidden relative">
+        {/* Mode Switch Button */}
+        <div className="absolute top-2 right-2 z-10 flex gap-1 bg-black/70 rounded-lg p-1">
+          <button
+            onClick={() => setDisplayMode('auto')}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              displayMode === 'auto'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="自动选择最佳显示模式"
+          >
+            自动
+          </button>
+          <button
+            onClick={() => setDisplayMode('video')}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              displayMode === 'video'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="强制使用视频流"
+          >
+            视频流
+          </button>
+          <button
+            onClick={() => setDisplayMode('screenshot')}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              displayMode === 'screenshot'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="使用截图模式 (0.5s刷新)"
+          >
+            截图
+          </button>
+        </div>
+
+        {displayMode === 'video' || (displayMode === 'auto' && useVideoStream && !videoStreamFailed) ? (
           <ScrcpyPlayer
             className="w-full h-full"
             onFallback={() => {
-              console.log('[Chat] Video stream failed, falling back to screenshots');
               setVideoStreamFailed(true);
               setUseVideoStream(false);
             }}
@@ -478,13 +518,14 @@ function ChatComponent() {
                   }}
                 />
                 {screenshot.is_sensitive && (
-                  <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500 text-white text-xs rounded">
+                  <div className="absolute top-12 right-2 px-2 py-1 bg-yellow-500 text-white text-xs rounded">
                     敏感内容
                   </div>
                 )}
-                {/* Fallback indicator */}
+                {/* Mode indicator */}
                 <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500 text-white text-xs rounded">
                   截图模式 (0.5s 刷新)
+                  {displayMode === 'auto' && videoStreamFailed && ' - 视频流不可用'}
                 </div>
               </div>
             ) : screenshot?.error ? (
