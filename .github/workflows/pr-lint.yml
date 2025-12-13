@@ -111,7 +111,9 @@ jobs:
           fi
 
       - name: Comment PR with results
-        if: always() && github.event_name == 'pull_request'
+        # 只在非 fork PR 时尝试评论（fork PR 没有写权限）
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true  # 即使评论失败也不阻塞 workflow
         uses: actions/github-script@v7
         with:
           script: |
