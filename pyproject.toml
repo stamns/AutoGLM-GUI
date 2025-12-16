@@ -22,6 +22,7 @@ classifiers = [
 ]
 dependencies = [
     "fastapi>=0.124.0",
+    "httpx[socks]>=0.28.1",
     "loguru>=0.7.3",
     "openai>=2.9.0",
     "pillow>=11.3.0",
