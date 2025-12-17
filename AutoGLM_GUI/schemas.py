@@ -125,3 +125,20 @@ class TouchUpResponse(BaseModel):
 
 class DeviceListResponse(BaseModel):
     devices: list[dict]
+
+
+class ConfigResponse(BaseModel):
+    """配置读取响应."""
+
+    base_url: str
+    model_name: str
+    api_key_configured: bool  # 不返回实际值，只返回是否配置
+    source: str  # "file" | "cli" | "default"
+
+
+class ConfigSaveRequest(BaseModel):
+    """配置保存请求."""
+
+    base_url: str
+    model_name: str = "autoglm-phone-9b"
+    api_key: str | None = None

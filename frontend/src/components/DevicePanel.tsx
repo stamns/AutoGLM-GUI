@@ -22,22 +22,24 @@ interface Message {
 
 // 全局配置接口
 interface GlobalConfig {
-  baseUrl: string;
-  apiKey: string;
-  modelName: string;
+  base_url: string;
+  model_name: string;
+  api_key?: string;
 }
 // DevicePanel Props 接口
 interface DevicePanelProps {
   deviceId: string;
   deviceName: string;
-  config: GlobalConfig;
+  config: GlobalConfig | null;
   isVisible: boolean;
+  isConfigured: boolean;
 }
 
 export function DevicePanel({
   deviceId,
   deviceName,
   config,
+  isConfigured,
 }: DevicePanelProps) {
   // ========== 内部状态管理 ==========
   const [messages, setMessages] = useState<Message[]>([]);
@@ -90,9 +92,9 @@ export function DevicePanel({
     try {
       await initAgent({
         model_config: {
-          base_url: config.baseUrl || undefined,
-          api_key: config.apiKey || undefined,
-          model_name: config.modelName || undefined,
+          base_url: config?.base_url || undefined,
+          api_key: config?.api_key || undefined,
+          model_name: config?.model_name || undefined,
         },
         agent_config: {
           device_id: deviceId,
@@ -321,25 +323,37 @@ export function DevicePanel({
               {deviceId}
             </p>
           </div>
-          <div className="flex gap-2">
-            {!initialized ? (
-              <button
-                onClick={handleInit}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
-              >
-                初始化设备
-              </button>
-            ) : (
-              <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm">
-                已初始化
-              </span>
+          <div className="flex flex-col gap-2">
+            {!initialized && !isConfigured && (
+              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs text-yellow-800 dark:text-yellow-200">
+                ⚠️ 请先配置 Base URL（点击左下角&quot;全局配置&quot;按钮）
+              </div>
             )}
-            <button
-              onClick={handleReset}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
-            >
-              重置
-            </button>
+            <div className="flex gap-2">
+              {!initialized ? (
+                <button
+                  onClick={handleInit}
+                  disabled={!isConfigured || !config}
+                  className={`px-4 py-2 rounded-lg transition-colors text-sm ${
+                    !isConfigured || !config
+                      ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-gray-500 dark:text-gray-400'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  初始化设备
+                </button>
+              ) : (
+                <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm">
+                  已初始化
+                </span>
+              )}
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+              >
+                重置
+              </button>
+            </div>
           </div>
         </div>
 
@@ -434,7 +448,13 @@ export function DevicePanel({
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
-              placeholder={!initialized ? '请先初始化设备' : '输入任务描述...'}
+              placeholder={
+                !isConfigured
+                  ? '请先配置 Base URL'
+                  : !initialized
+                    ? '请先初始化设备'
+                    : '输入任务描述...'
+              }
               disabled={loading}
               className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />

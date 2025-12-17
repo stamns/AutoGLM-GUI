@@ -1,7 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { listDevices, type Device } from '../api';
+import {
+  listDevices,
+  getConfig,
+  saveConfig,
+  type Device,
+  type ConfigSaveRequest,
+} from '../api';
 import { DeviceSidebar } from '../components/DeviceSidebar';
 import { DevicePanel } from '../components/DevicePanel';
 
@@ -15,12 +21,42 @@ function ChatComponent() {
   const [currentDeviceId, setCurrentDeviceId] = useState<string>('');
 
   // 全局配置（所有设备共享）
-  const [config, setConfig] = useState({
-    baseUrl: '',
-    apiKey: '',
-    modelName: '',
-  });
+  const [config, setConfig] = useState<ConfigSaveRequest | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [tempConfig, setTempConfig] = useState({
+    base_url: '',
+    model_name: '',
+    api_key: '',
+  });
+
+  // 加载配置
+  useEffect(() => {
+    const loadConfiguration = async () => {
+      try {
+        const data = await getConfig();
+        setConfig({
+          base_url: data.base_url,
+          model_name: data.model_name,
+          api_key: undefined,
+        });
+        setTempConfig({
+          base_url: data.base_url,
+          model_name: data.model_name,
+          api_key: '',
+        });
+
+        // 如果 base_url 为空，自动打开配置模态框
+        if (!data.base_url) {
+          setShowConfig(true);
+        }
+      } catch (err) {
+        console.error('Failed to load config:', err);
+        setShowConfig(true); // 加载失败时也打开配置
+      }
+    };
+
+    loadConfiguration();
+  }, []);
 
   // 加载设备列表
   useEffect(() => {
@@ -52,29 +88,73 @@ function ChatComponent() {
     return () => clearInterval(interval);
   }, [currentDeviceId]);
 
+  const handleSaveConfig = async () => {
+    try {
+      // 验证 base_url
+      if (!tempConfig.base_url) {
+        alert('Base URL 是必需的');
+        return;
+      }
+
+      // 保存到后端
+      await saveConfig({
+        base_url: tempConfig.base_url,
+        model_name: tempConfig.model_name || 'autoglm-phone-9b',
+        api_key: tempConfig.api_key || undefined,
+      });
+
+      // 更新本地状态
+      setConfig({
+        base_url: tempConfig.base_url,
+        model_name: tempConfig.model_name,
+        api_key: tempConfig.api_key || undefined,
+      });
+      setShowConfig(false);
+
+      console.log('Configuration saved successfully');
+    } catch (err) {
+      console.error('Failed to save config:', err);
+      alert(
+        `保存配置失败: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
+    }
+  };
+
   return (
     <div className="h-full flex relative min-h-0">
       {/* Config Modal */}
       {showConfig && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-96 shadow-xl border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-              Agent 配置
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                全局配置
+              </h2>
+              {config && config.base_url && (
+                <span className="text-xs text-green-600 dark:text-green-400">
+                  ✓ 已配置
+                </span>
+              )}
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                  Base URL
+                  Base URL *
                 </label>
                 <input
                   type="text"
-                  value={config.baseUrl}
+                  value={tempConfig.base_url}
                   onChange={e =>
-                    setConfig({ ...config, baseUrl: e.target.value })
+                    setTempConfig({ ...tempConfig, base_url: e.target.value })
                   }
-                  placeholder="留空使用默认值"
+                  placeholder="http://localhost:8080/v1"
                   className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
+                {!tempConfig.base_url && (
+                  <p className="text-xs text-red-500 mt-1">
+                    ⚠️ Base URL 是必需的
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
@@ -82,11 +162,11 @@ function ChatComponent() {
                 </label>
                 <input
                   type="password"
-                  value={config.apiKey}
+                  value={tempConfig.api_key}
                   onChange={e =>
-                    setConfig({ ...config, apiKey: e.target.value })
+                    setTempConfig({ ...tempConfig, api_key: e.target.value })
                   }
-                  placeholder="留空使用默认值"
+                  placeholder="留空表示不设置"
                   className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
@@ -96,26 +176,36 @@ function ChatComponent() {
                 </label>
                 <input
                   type="text"
-                  value={config.modelName}
+                  value={tempConfig.model_name}
                   onChange={e =>
-                    setConfig({ ...config, modelName: e.target.value })
+                    setTempConfig({ ...tempConfig, model_name: e.target.value })
                   }
-                  placeholder="留空使用默认值"
+                  placeholder="autoglm-phone-9b"
                   className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div className="flex justify-end gap-2 mt-6">
                 <button
-                  onClick={() => setShowConfig(false)}
+                  onClick={() => {
+                    setShowConfig(false);
+                    // 恢复原始配置
+                    if (config) {
+                      setTempConfig({
+                        base_url: config.base_url,
+                        model_name: config.model_name,
+                        api_key: '',
+                      });
+                    }
+                  }}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   取消
                 </button>
                 <button
-                  onClick={() => setShowConfig(false)}
+                  onClick={handleSaveConfig}
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
-                  确认配置
+                  保存配置
                 </button>
               </div>
             </div>
@@ -168,6 +258,7 @@ function ChatComponent() {
                 deviceName={device.model}
                 config={config}
                 isVisible={device.id === currentDeviceId}
+                isConfigured={!!config?.base_url}
               />
             </div>
           ))

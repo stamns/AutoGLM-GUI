@@ -76,8 +76,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--base-url",
-        required=True,
-        help="Base URL of the model API (required, e.g., http://localhost:8080/v1)",
+        required=False,
+        help="Base URL of the model API (e.g., http://localhost:8080/v1)",
     )
     parser.add_argument(
         "--model",
@@ -127,11 +127,6 @@ def main() -> None:
         help="Disable file logging",
     )
 
-    # If no arguments provided, print help and exit
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-
     args = parser.parse_args()
 
     # Auto-find available port if not specified
@@ -147,6 +142,7 @@ def main() -> None:
 
     from AutoGLM_GUI import server
     from AutoGLM_GUI.config import config
+    from AutoGLM_GUI.config_manager import load_config_file, merge_configs
     from AutoGLM_GUI.logger import configure_logger
 
     # Configure logging system
@@ -155,14 +151,35 @@ def main() -> None:
         log_file=None if args.no_log_file else args.log_file,
     )
 
+    # Load configuration from file
+    file_config = load_config_file()
+
+    # Build CLI config dictionary (only include provided arguments)
+    cli_config = {}
+    if args.base_url:
+        cli_config["base_url"] = args.base_url
+    if args.model:
+        cli_config["model_name"] = args.model
+    if args.apikey:
+        cli_config["api_key"] = args.apikey
+
+    # Merge configurations (CLI > file > defaults)
+    merged_config = merge_configs(file_config, cli_config)
+
     # Set model configuration via environment variables (survives reload)
-    os.environ["AUTOGLM_BASE_URL"] = args.base_url
-    os.environ["AUTOGLM_MODEL_NAME"] = args.model
-    if args.apikey is not None:
-        os.environ["AUTOGLM_API_KEY"] = args.apikey
+    os.environ["AUTOGLM_BASE_URL"] = merged_config["base_url"]
+    os.environ["AUTOGLM_MODEL_NAME"] = merged_config["model_name"]
+    os.environ["AUTOGLM_API_KEY"] = merged_config["api_key"]
 
     # Refresh config from environment variables
     config.refresh_from_env()
+
+    # Determine configuration source
+    config_source = "default"
+    if cli_config:
+        config_source = "CLI arguments"
+    elif file_config:
+        config_source = "config file (~/.config/autoglm/config.json)"
 
     # Display startup banner
     print()
@@ -174,11 +191,19 @@ def main() -> None:
     print(f"  Server:     http://{args.host}:{args.port}")
     print()
     print("  Model Configuration:")
-    print(f"    Base URL: {args.base_url}")
-    print(f"    Model:    {args.model}")
-    if args.apikey is not None:
-        print("    API Key:  (provided via --apikey)")
+    print(f"    Source:   {config_source}")
+    print(f"    Base URL: {merged_config['base_url'] or '(not set)'}")
+    print(f"    Model:    {merged_config['model_name']}")
+    if merged_config["api_key"] != "EMPTY":
+        print("    API Key:  (configured)")
     print()
+
+    # Warning if base_url is not configured
+    if not merged_config["base_url"]:
+        print("  ⚠️  WARNING: base_url is not configured!")
+        print("     Please configure via frontend or use --base-url")
+        print()
+
     print("=" * 50)
     print("  Press Ctrl+C to stop")
     print("=" * 50)

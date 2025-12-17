@@ -1,16 +1,25 @@
 """Agent lifecycle and chat routes."""
 
 import json
+import os
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from AutoGLM_GUI.config import config
+from AutoGLM_GUI.config_manager import (
+    delete_config_file,
+    get_config_path,
+    load_config_file,
+    save_config_file,
+)
 from AutoGLM_GUI.schemas import (
     APIAgentConfig,
     APIModelConfig,
     ChatRequest,
     ChatResponse,
+    ConfigResponse,
+    ConfigSaveRequest,
     InitRequest,
     ResetRequest,
     StatusResponse,
@@ -47,7 +56,8 @@ def init_agent(request: InitRequest) -> dict:
 
     if not base_url:
         raise HTTPException(
-            status_code=400, detail="base_url is required (in model_config or env)"
+            status_code=400,
+            detail="base_url is required. Please configure via Settings or start with --base-url",
         )
 
     model_config = ModelConfig(
@@ -228,3 +238,66 @@ def reset_agent(request: ResetRequest) -> dict:
         "device_id": device_id,
         "message": f"Agent reset for device {device_id}",
     }
+
+
+@router.get("/api/config", response_model=ConfigResponse)
+def get_config_endpoint() -> ConfigResponse:
+    """获取当前有效配置."""
+    config.refresh_from_env()
+
+    # 判断配置来源
+    file_config = load_config_file()
+    source = "file" if file_config else "default"
+
+    return ConfigResponse(
+        base_url=config.base_url,
+        model_name=config.model_name,
+        api_key_configured=(config.api_key != "EMPTY" and config.api_key != ""),
+        source=source,
+    )
+
+
+@router.post("/api/config")
+def save_config_endpoint(request: ConfigSaveRequest) -> dict:
+    """保存配置到文件."""
+    try:
+        config_data = {
+            "base_url": request.base_url,
+            "model_name": request.model_name,
+        }
+
+        # 只有提供了 api_key 才保存
+        if request.api_key:
+            config_data["api_key"] = request.api_key
+
+        success = save_config_file(config_data)
+
+        if success:
+            # 刷新全局配置
+            os.environ["AUTOGLM_BASE_URL"] = request.base_url
+            os.environ["AUTOGLM_MODEL_NAME"] = request.model_name
+            if request.api_key:
+                os.environ["AUTOGLM_API_KEY"] = request.api_key
+            config.refresh_from_env()
+
+            return {
+                "success": True,
+                "message": f"Configuration saved to {get_config_path()}",
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save config")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/config")
+def delete_config_endpoint() -> dict:
+    """删除配置文件."""
+    try:
+        success = delete_config_file()
+        if success:
+            return {"success": True, "message": "Configuration deleted"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete config")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

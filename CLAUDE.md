@@ -77,6 +77,69 @@ uvx --from dist/autoglm_gui-*.whl autoglm-gui
 uv publish
 ```
 
+## Configuration Management
+
+### Configuration File
+
+AutoGLM-GUI supports persistent configuration stored in `~/.config/autoglm/config.json`:
+
+```json
+{
+  "base_url": "http://localhost:8080/v1",
+  "model_name": "autoglm-phone-9b",
+  "api_key": "sk-xxxxx"
+}
+```
+
+### Configuration Priority
+
+Configuration is loaded with the following priority (highest to lowest):
+
+1. **CLI Arguments** (highest priority) - Override everything else
+2. **Config File** (`~/.config/autoglm/config.json`) - Persistent settings
+3. **Default Values** (lowest priority) - Built-in defaults
+
+### Usage Examples
+
+**First Time Setup (via Frontend)**:
+1. Start: `uv run autoglm-gui`
+2. Frontend opens config modal automatically (if no base_url configured)
+3. Fill in `base_url`, `model_name`, `api_key`
+4. Click "保存配置" (Save Configuration)
+5. Configuration is saved to `~/.config/autoglm/config.json`
+
+**Using Config File**:
+```bash
+# Start with saved configuration
+uv run autoglm-gui
+
+# The startup banner will show:
+#   Configuration Source: config file (~/.config/autoglm/config.json)
+```
+
+**Using CLI Arguments (Override Config)**:
+```bash
+# CLI arguments override config file
+uv run autoglm-gui --base-url http://localhost:8080/v1 --model autoglm-phone-9b
+
+# The startup banner will show:
+#   Configuration Source: CLI arguments
+```
+
+**Managing Config**:
+- **View**: Click "全局配置" (Global Config) button in frontend sidebar
+- **Edit**: Update via frontend modal and click "保存配置"
+- **Delete**: Remove `~/.config/autoglm/config.json` manually
+- **Check Current**: Backend startup banner shows config source
+
+### Configuration API Endpoints
+
+The frontend uses these API endpoints for configuration management:
+
+- `GET /api/config` - Read current effective configuration
+- `POST /api/config` - Save configuration to file
+- `DELETE /api/config` - Delete configuration file
+
 ## Architecture
 
 ### Request Flow

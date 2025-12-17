@@ -352,3 +352,38 @@ export async function sendTouchUp(
   });
   return res.data;
 }
+
+// Configuration Management
+
+export interface ConfigResponse {
+  base_url: string;
+  model_name: string;
+  api_key_configured: boolean;
+  source: string;
+}
+
+export interface ConfigSaveRequest {
+  base_url: string;
+  model_name: string;
+  api_key?: string;
+}
+
+export async function getConfig(): Promise<ConfigResponse> {
+  const res = await axios.get<ConfigResponse>('/api/config');
+  return res.data;
+}
+
+export async function saveConfig(
+  config: ConfigSaveRequest
+): Promise<{ success: boolean; message: string }> {
+  const res = await axios.post('/api/config', config);
+  return res.data;
+}
+
+export async function deleteConfig(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const res = await axios.delete('/api/config');
+  return res.data;
+}
