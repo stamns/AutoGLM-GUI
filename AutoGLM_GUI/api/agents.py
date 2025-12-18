@@ -243,20 +243,47 @@ def reset_agent(request: ResetRequest) -> dict:
 @router.get("/api/config", response_model=ConfigResponse)
 def get_config_endpoint() -> ConfigResponse:
     """获取当前有效配置."""
-    from AutoGLM_GUI.config_manager import merge_configs
+    from AutoGLM_GUI.config import config
 
     # 加载配置文件
     file_config = load_config_file()
 
-    # 合并配置（文件 > 默认值）
-    merged_config = merge_configs(file_config, None)
+    # 读取当前实际运行的配置
+    current_base_url = os.getenv("AUTOGLM_BASE_URL", config.base_url)
+    current_model_name = os.getenv("AUTOGLM_MODEL_NAME", config.model_name)
+    current_api_key = os.getenv("AUTOGLM_API_KEY", config.api_key)
 
-    source = "file" if file_config else "default"
+    # 判断配置来源
+    # 如果环境变量中有 CLI 参数设置的值，优先级最高
+    env_config = {
+        "base_url": os.getenv("AUTOGLM_BASE_URL"),
+        "model_name": os.getenv("AUTOGLM_MODEL_NAME"),
+        "api_key": os.getenv("AUTOGLM_API_KEY"),
+    }
+
+    # 检查是否有 CLI 参数（环境变量值不同于默认值且文件配置中没有对应值）
+    has_cli_config = (
+        (env_config["base_url"] and env_config["base_url"] != "") and
+        (not file_config or file_config.get("base_url") != env_config["base_url"])
+    ) or (
+        (env_config["model_name"] and env_config["model_name"] != "autoglm-phone-9b") and
+        (not file_config or file_config.get("model_name") != env_config["model_name"])
+    ) or (
+        (env_config["api_key"] and env_config["api_key"] != "EMPTY") and
+        (not file_config or file_config.get("api_key") != env_config["api_key"])
+    )
+
+    if has_cli_config:
+        source = "CLI arguments"
+    elif file_config:
+        source = "config file"
+    else:
+        source = "default"
 
     return ConfigResponse(
-        base_url=merged_config["base_url"],
-        model_name=merged_config["model_name"],
-        api_key=merged_config["api_key"] if merged_config["api_key"] != "EMPTY" else "",
+        base_url=current_base_url,
+        model_name=current_model_name,
+        api_key=current_api_key if current_api_key != "EMPTY" else "",
         source=source,
     )
 
