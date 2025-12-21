@@ -19,7 +19,7 @@ import type {
 } from '../api';
 import { getScreenshot, initAgent, resetChat, sendMessageStream } from '../api';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 
@@ -66,7 +66,6 @@ export function DevicePanel({
   const [displayMode, setDisplayMode] = useState<
     'auto' | 'video' | 'screenshot'
   >('auto');
-  const [isComposing, setIsComposing] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -309,8 +308,8 @@ export function DevicePanel({
     return () => clearInterval(interval);
   }, [deviceId, videoStreamFailed, displayMode]);
 
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' && !isComposing && !event.shiftKey) {
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
       event.preventDefault();
       handleSend();
     }
@@ -508,23 +507,21 @@ export function DevicePanel({
 
         {/* Input area */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <Input
-              type="text"
+          <div className="flex items-end gap-3">
+            <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
-              onCompositionStart={() => setIsComposing(true)}
-              onCompositionEnd={() => setIsComposing(false)}
               placeholder={
                 !isConfigured
                   ? 'Please configure first'
                   : !initialized
                     ? 'Initialize device first'
-                    : 'What would you like to do?'
+                    : 'What would you like to do? (Cmd+Enter to send)'
               }
               disabled={loading}
-              className="flex-1"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none"
+              rows={1}
             />
             <Button
               onClick={handleSend}

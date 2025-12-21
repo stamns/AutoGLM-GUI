@@ -31,7 +31,39 @@ import {
   Eye,
   EyeOff,
   X,
+  Server,
 } from 'lucide-react';
+
+// 预设配置选项
+const PRESET_CONFIGS = [
+  {
+    name: '智谱 BigModel',
+    description: '智谱 AI 提供的 API 服务',
+    config: {
+      base_url: 'https://open.bigmodel.cn/api/paas/v4',
+      model_name: 'autoglm-phone',
+      api_key: '',
+    },
+  },
+  {
+    name: 'ModelScope',
+    description: '魔搭社区提供的 API 服务',
+    config: {
+      base_url: 'https://api-inference.modelscope.cn/v1',
+      model_name: 'ZhipuAI/AutoGLM-Phone-9B',
+      api_key: '',
+    },
+  },
+  {
+    name: '自建服务',
+    description: 'vLLM / SGLang 等自建服务',
+    config: {
+      base_url: '',
+      model_name: 'autoglm-phone-9b',
+      api_key: '',
+    },
+  },
+] as const;
 
 export const Route = createFileRoute('/chat')({
   component: ChatComponent,
@@ -217,6 +249,51 @@ function ChatComponent() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* 预设配置选项 */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">选择预设配置</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {PRESET_CONFIGS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() =>
+                      setTempConfig({
+                        base_url: preset.config.base_url,
+                        model_name: preset.config.model_name,
+                        api_key: preset.config.api_key,
+                      })
+                    }
+                    className={`text-left p-3 rounded-lg border transition-all ${
+                      tempConfig.base_url === preset.config.base_url &&
+                      (preset.name !== '自建服务' ||
+                        (preset.name === '自建服务' && tempConfig.base_url === ''))
+                        ? 'border-[#1d9bf0] bg-[#1d9bf0]/5'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-[#1d9bf0]/50 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Server
+                        className={`w-4 h-4 ${
+                          tempConfig.base_url === preset.config.base_url &&
+                          (preset.name !== '自建服务' ||
+                            (preset.name === '自建服务' && tempConfig.base_url === ''))
+                            ? 'text-[#1d9bf0]'
+                            : 'text-slate-400'
+                        }`}
+                      />
+                      <span className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                        {preset.name}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 ml-6">
+                      {preset.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="base_url">Base URL *</Label>
               <Input
