@@ -9,6 +9,8 @@ export const zh = {
   },
   footer: {
     starOnGitHub: '在 GitHub 上Star',
+    newVersion: '新版本!',
+    updateAvailable: '可用更新: v{version}',
   },
   chat: {
     welcomeTitle: '欢迎使用 AutoGLM',

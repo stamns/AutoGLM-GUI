@@ -434,3 +434,17 @@ export async function deleteConfig(): Promise<{
   const res = await axios.delete('/api/config');
   return res.data;
 }
+
+export interface VersionCheckResponse {
+  current_version: string;
+  latest_version: string | null;
+  has_update: boolean;
+  release_url: string | null;
+  published_at: string | null;
+  error: string | null;
+}
+
+export async function checkVersion(): Promise<VersionCheckResponse> {
+  const res = await axios.get<VersionCheckResponse>('/api/version/latest');
+  return res.data;
+}

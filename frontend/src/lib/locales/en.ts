@@ -9,6 +9,8 @@ export const en = {
   },
   footer: {
     starOnGitHub: 'Star on GitHub',
+    newVersion: 'New!',
+    updateAvailable: 'Update available: v{version}',
   },
   chat: {
     welcomeTitle: 'Welcome to AutoGLM',

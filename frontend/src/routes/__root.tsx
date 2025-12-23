@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { Outlet, createRootRoute } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
-import { getStatus } from '../api';
+import { getStatus, checkVersion, type VersionCheckResponse } from '../api';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { Github, Globe } from 'lucide-react';
-import { useLocale } from '../lib/i18n-context';
+import { useLocale, useTranslation } from '../lib/i18n-context';
 import { ThemeToggle } from '../components/ThemeToggle';
 
 export const Route = createRootRoute({
@@ -14,22 +15,90 @@ export const Route = createRootRoute({
 function Footer() {
   const [version, setVersion] = React.useState<string>('...');
   const { locale, setLocale, localeName } = useLocale();
+  const t = useTranslation();
+  const [updateInfo, setUpdateInfo] =
+    React.useState<VersionCheckResponse | null>(null);
+  const [showUpdateBadge, setShowUpdateBadge] = React.useState(false);
 
   React.useEffect(() => {
     getStatus()
       .then(status => setVersion(status.version))
       .catch(() => setVersion('unknown'));
+
+    // Check for updates
+    const checkForUpdates = async () => {
+      // 1. Check session storage cache (1 hour TTL)
+      const cachedCheck = sessionStorage.getItem('version_check');
+      if (cachedCheck) {
+        try {
+          const { data, timestamp } = JSON.parse(cachedCheck);
+          if (Date.now() - timestamp < 3600000) {
+            // 1 hour
+            setUpdateInfo(data);
+            setShowUpdateBadge(data.has_update);
+            return;
+          }
+        } catch (e) {
+          // Invalid cache, continue to fetch
+        }
+      }
+
+      // 2. Fetch from API
+      try {
+        const result = await checkVersion();
+        setUpdateInfo(result);
+
+        // Cache in session storage
+        sessionStorage.setItem(
+          'version_check',
+          JSON.stringify({
+            data: result,
+            timestamp: Date.now(),
+          })
+        );
+
+        // Show badge if update available
+        setShowUpdateBadge(result.has_update);
+      } catch (err) {
+        console.error('Failed to check for updates:', err);
+        // Silently fail - non-critical feature
+      }
+    };
+
+    checkForUpdates();
   }, []);
 
   const toggleLocale = () => {
     setLocale(locale === 'en' ? 'zh' : 'en');
   };
 
+  const handleUpdateClick = () => {
+    if (updateInfo?.release_url) {
+      // Open release page in new tab
+      window.open(updateInfo.release_url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-          <span>v{version}</span>
+          <span className="flex items-center gap-1.5">
+            v{version}
+            {showUpdateBadge && updateInfo?.latest_version && (
+              <Badge
+                variant="warning"
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleUpdateClick}
+                title={t.footer.updateAvailable.replace(
+                  '{version}',
+                  updateInfo.latest_version
+                )}
+              >
+                {t.footer.newVersion}
+              </Badge>
+            )}
+          </span>
           <Separator
             orientation="vertical"
             className="h-4 bg-slate-200 dark:bg-slate-700"

@@ -175,3 +175,14 @@ class WiFiDisconnectResponse(BaseModel):
     success: bool
     message: str
     error: str | None = None
+
+
+class VersionCheckResponse(BaseModel):
+    """Version update check response."""
+
+    current_version: str
+    latest_version: str | None = None
+    has_update: bool = False
+    release_url: str | None = None
+    published_at: str | None = None
+    error: str | None = None

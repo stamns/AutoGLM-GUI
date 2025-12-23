@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from AutoGLM_GUI.version import APP_VERSION
 
-from . import agents, control, devices, media
+from . import agents, control, devices, media, version
 
 
 def _get_static_dir() -> Path | None:
@@ -54,6 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(devices.router)
     app.include_router(control.router)
     app.include_router(media.router)
+    app.include_router(version.router)
 
     static_dir = _get_static_dir()
     if static_dir is not None and static_dir.exists():
