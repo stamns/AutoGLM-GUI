@@ -23,6 +23,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent.parent
 PYPROJECT_PATH = ROOT_DIR / "pyproject.toml"
 ELECTRON_PACKAGE_JSON_PATH = ROOT_DIR / "electron" / "package.json"
+README_PATH = ROOT_DIR / "README.md"
 
 
 def get_current_version() -> str:
@@ -126,17 +127,55 @@ def update_electron_package_json_version(new_version: str) -> bool:
         return False
 
 
+def update_readme_download_links(new_version: str) -> bool:
+    """Update download links in README.md with new version."""
+    print(f"Updating README.md download links to version {new_version}...")
+
+    if not README_PATH.exists():
+        print(f"Warning: {README_PATH} not found, skipping...")
+        return True
+
+    try:
+        content = README_PATH.read_text(encoding="utf-8")
+
+        # Update macOS download link
+        # Pattern: /releases/download/v{VERSION}/AutoGLM.GUI-{VERSION}-arm64.dmg
+        content = re.sub(
+            r"/releases/download/v[\d.]+/AutoGLM\.GUI-[\d.]+-arm64\.dmg",
+            f"/releases/download/v{new_version}/AutoGLM.GUI-{new_version}-arm64.dmg",
+            content,
+        )
+
+        # Update Windows download link
+        # Pattern: /releases/download/v{VERSION}/AutoGLM.GUI.{VERSION}.exe
+        content = re.sub(
+            r"/releases/download/v[\d.]+/AutoGLM\.GUI\.[\d.]+\.exe",
+            f"/releases/download/v{new_version}/AutoGLM.GUI.{new_version}.exe",
+            content,
+        )
+
+        README_PATH.write_text(content, encoding="utf-8")
+        print(f"Updated README.md download links to v{new_version}")
+        return True
+
+    except Exception as e:
+        print(f"Error: Failed to update {README_PATH}: {e}")
+        return False
+
+
 def git_commit_version(version: str, dry_run: bool = False) -> bool:
-    """Commit version bumps in pyproject.toml and electron/package.json."""
+    """Commit version bumps in pyproject.toml, electron/package.json, and README.md."""
     print("Committing version bump to git...")
 
     if dry_run:
-        print("[DRY RUN] Would run: git add pyproject.toml electron/package.json")
+        print(
+            "[DRY RUN] Would run: git add pyproject.toml electron/package.json README.md"
+        )
         print(f'[DRY RUN] Would run: git commit -m "release v{version}"')
         return True
 
     try:
-        # Stage pyproject.toml and electron/package.json
+        # Stage pyproject.toml, electron/package.json, and README.md
         result = subprocess.run(
             [
                 "git",
@@ -144,6 +183,7 @@ def git_commit_version(version: str, dry_run: bool = False) -> bool:
                 "pyproject.toml",
                 "electron/package.json",
                 "electron/package-lock.json",
+                "README.md",
                 "uv.lock",
             ],
             cwd=ROOT_DIR,
@@ -284,6 +324,10 @@ def main() -> int:
 
         # Update electron/package.json
         if not update_electron_package_json_version(new_version):
+            return 1
+
+        # Update README.md download links
+        if not update_readme_download_links(new_version):
             return 1
         print()
 

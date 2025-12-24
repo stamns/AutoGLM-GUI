@@ -19,6 +19,37 @@ AutoGLM 手机助手的现代化 Web 图形界面 - 让 AI 自动化操作 Andro
 - **ADB 深度集成** - 通过 Android Debug Bridge 直接控制设备
 - **模块化界面** - 清晰的侧边栏 + 设备面板设计，功能分离明确
 
+## 📥 快速下载
+
+**一键下载桌面版（免配置环境）：**
+
+<div align="center">
+
+| 操作系统 | 下载链接 | 说明 |
+|---------|---------|------|
+| 🍎 **macOS** (Apple Silicon) | [📦 下载 DMG](https://github.com/suyiiyii/AutoGLM-GUI/releases/download/v0.4.14/AutoGLM.GUI-0.4.14-arm64.dmg) | 适用于 M 芯片 Mac |
+| 🪟 **Windows** (x64) | [📦 下载便携版 EXE](https://github.com/suyiiyii/AutoGLM-GUI/releases/download/v0.4.14/AutoGLM.GUI.0.4.14.exe) | 适用于 Windows 10/11，免安装 |
+
+</div>
+
+**使用说明：**
+- **macOS**: 下载后双击 `.dmg` 文件，拖拽到应用程序文件夹。首次打开可能需要在「系统设置 → 隐私与安全性」中允许运行
+- **Windows**: 下载后直接双击 `.exe` 文件运行，无需安装
+
+> 💡 **提示**: 桌面版已内置所有依赖（Python、ADB 等），无需手动配置环境。首次运行时需配置模型服务 API。
+
+---
+
+**或者使用 Python 包（需要 Python 环境）：**
+
+```bash
+# 通过 pip 安装（推荐）
+pip install autoglm-gui
+
+# 或使用 uvx 免安装运行（需先安装 uv）
+uvx autoglm-gui
+```
+
 ## 📸 界面预览
 
 ### 任务开始
