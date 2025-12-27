@@ -463,9 +463,8 @@ export function DeviceSidebar({
           variant="outline"
           size="icon"
           onClick={toggleCollapse}
-          className="fixed left-0 top-20 z-50 h-16 w-8 rounded-r-lg rounded-l-none border-l-0 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
+          className="absolute left-0 top-20 z-50 h-16 w-8 rounded-r-lg rounded-l-none border-l-0 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
           title="Expand sidebar"
-          style={{ left: 0 }}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
