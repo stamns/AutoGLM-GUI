@@ -11,7 +11,6 @@ interface DeviceCardProps {
   model: string;
   status: string;
   connectionType?: string;
-  isInitialized: boolean;
   agent?: AgentStatus | null;
   isActive: boolean;
   onClick: () => void;
@@ -24,7 +23,6 @@ export function DeviceCard({
   model,
   status,
   connectionType,
-  isInitialized,
   agent,
   isActive,
   onClick,

@@ -17,7 +17,6 @@ export interface Device {
   state: string;
   is_available_only: boolean;
   agent: AgentStatus | null; // Agent runtime status (null if not initialized)
-  is_initialized: boolean; // Backward compatibility (deprecated)
 }
 
 export interface DeviceListResponse {

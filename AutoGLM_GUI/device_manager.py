@@ -77,7 +77,6 @@ class ManagedDevice:
 
     # Device-level state
     state: DeviceState = DeviceState.ONLINE
-    is_initialized: bool = False  # Device-level initialization
 
     # Timestamps
     first_seen: float = field(default_factory=time.time)
@@ -120,20 +119,6 @@ class ManagedDevice:
 
         self.primary_connection_idx = sorted_conns[0][0]
 
-    def to_api_dict(self) -> dict:
-        """Convert to API response format (backward compatible)."""
-        return {
-            "id": self.primary_device_id,  # Primary connection's device_id
-            "serial": self.serial,
-            "model": self.model or "Unknown",
-            "status": self.status,
-            "connection_type": self.connection_type.value,
-            "is_initialized": self.is_initialized,
-            "state": self.state.value,  # Device state (online/offline/disconnected/available)
-            "is_available_only": self.state
-            == DeviceState.AVAILABLE_MDNS,  # mDNS discovered but not connected
-        }
-
     def to_api_dict_with_agent(self, agent_manager: PhoneAgentManager) -> dict:
         """转换为 API 响应格式,包含 Agent 状态.
 
@@ -171,15 +156,12 @@ class ManagedDevice:
                     "error_message": metadata.error_message,
                     "model_name": metadata.model_config.model_name,
                 }
-                result["is_initialized"] = True
             else:
                 # 不应该发生,但安全处理
                 result["agent"] = None
-                result["is_initialized"] = True
         else:
             # 无 Agent 初始化
             result["agent"] = None
-            result["is_initialized"] = False
 
         return result
 
@@ -198,7 +180,7 @@ def _is_mdns_connection(device_id: str) -> bool:
 
 
 def _create_managed_device(
-    serial: str, device_infos: list[DeviceInfo], agents: dict
+    serial: str, device_infos: list[DeviceInfo]
 ) -> ManagedDevice:
     """Create ManagedDevice from DeviceInfo list."""
     connections = [
@@ -232,9 +214,6 @@ def _create_managed_device(
     managed.state = (
         DeviceState.ONLINE if managed.status == "device" else DeviceState.OFFLINE
     )
-
-    # Check if initialized (any connection has agent)
-    managed.is_initialized = any(conn.device_id in agents for conn in connections)
 
     return managed
 
@@ -365,94 +344,6 @@ class DeviceManager:
 
             return None
 
-    def get_agent_by_serial(self, serial: str) -> Optional[str]:
-        """
-        Find device_id of initialized PhoneAgent for this device serial.
-
-        This method helps locate agents when device_id changes due to
-        connection switching (e.g., USB → WiFi).
-
-        Args:
-            serial: Hardware serial number of the device
-
-        Returns:
-            device_id of the initialized agent if found, None otherwise
-
-        Example:
-            >>> # Device was initialized via USB
-            >>> agents["ABC123"] = PhoneAgent(device_id="ABC123")
-            >>>
-            >>> # User switches to WiFi, device_id changes
-            >>> dm = DeviceManager.get_instance()
-            >>> agent_device_id = dm.get_agent_by_serial("ABC123")
-            >>> if agent_device_id:
-            >>>     agent = agents[agent_device_id]  # Found!
-        """
-        from AutoGLM_GUI.state import agents
-
-        with self._devices_lock:
-            device = self._devices.get(serial)
-            if not device:
-                return None
-
-            # Check all connections for initialized agents
-            for conn in device.connections:
-                if conn.device_id in agents:
-                    logger.debug(
-                        f"Found agent for serial {serial} at device_id {conn.device_id}"
-                    )
-                    return conn.device_id
-
-            return None
-
-    def update_initialization_status(
-        self, device_id: str, is_initialized: bool
-    ) -> None:
-        """
-        Update device initialization status with connection switch detection.
-
-        Args:
-            device_id: Current device_id (may differ from initial device_id)
-            is_initialized: Initialization status
-
-        Note:
-            This method detects connection switching:
-            - If agent exists under different device_id for same serial, logs warning
-            - Helps identify cases where agent reinitialization may be needed
-        """
-        from AutoGLM_GUI.state import agents
-
-        device = self.get_device_by_device_id(device_id)
-
-        if device:
-            with self._devices_lock:
-                # Check for connection switching
-                # (agent exists under different device_id for same device)
-                if is_initialized:
-                    # Find if agent exists under different device_id
-                    for conn in device.connections:
-                        if conn.device_id != device_id and conn.device_id in agents:
-                            # Connection switch detected!
-                            logger.warning(
-                                f"Connection switch detected for device {device.serial}: "
-                                f"{conn.device_id} → {device_id}. "
-                                f"Agent exists under old device_id. "
-                                f"Consider using DeviceManager.get_agent_by_serial() "
-                                f"to locate the existing agent."
-                            )
-                            break
-
-                # Update status
-                device.is_initialized = is_initialized
-                logger.debug(
-                    f"Device {device.serial} (via {device_id}) "
-                    f"initialization status: {is_initialized}"
-                )
-        else:
-            logger.warning(
-                f"Cannot update initialization status: device_id {device_id} not found"
-            )
-
     def force_refresh(self) -> None:
         """Trigger immediate device list refresh (blocking)."""
         logger.info("Force refreshing device list...")
@@ -502,7 +393,6 @@ class DeviceManager:
     def _poll_devices(self) -> None:
         """Poll ADB device list and update cache (serial-based aggregation)."""
         from AutoGLM_GUI.adb_plus import get_device_serial
-        from AutoGLM_GUI.state import agents
 
         # Step 1: Get ADB devices and fetch serials
         adb_devices = self._adb_conn.list_devices()
@@ -562,7 +452,7 @@ class DeviceManager:
             # Add new devices
             for serial in added_serials:
                 device_infos = grouped_by_serial[serial]
-                managed = _create_managed_device(serial, device_infos, agents)
+                managed = _create_managed_device(serial, device_infos)
                 self._devices[serial] = managed
 
                 # Update reverse mapping
@@ -610,28 +500,6 @@ class DeviceManager:
                     if managed.status == "device"
                     else DeviceState.OFFLINE
                 )
-
-                # Sync is_initialized from agents (check any device_id)
-                old_initialized = managed.is_initialized
-                new_initialized = any(
-                    conn.device_id in agents for conn in managed.connections
-                )
-
-                # If was initialized but no longer has agent, keep it True temporarily
-                # This prevents false negatives during connection transitions
-                if old_initialized and not new_initialized:
-                    # Check if any old connection had an agent
-                    had_agent_connection = any(
-                        old_id in agents for old_id in old_device_ids
-                    )
-                    if had_agent_connection:
-                        logger.info(
-                            f"Device {serial} lost agent connection during transition, "
-                            f"keeping is_initialized=True"
-                        )
-                        new_initialized = True
-
-                managed.is_initialized = new_initialized
 
                 # Update reverse mapping
                 new_device_ids = {conn.device_id for conn in managed.connections}
@@ -703,7 +571,6 @@ class DeviceManager:
                                 ],
                                 state=DeviceState.AVAILABLE_MDNS,
                                 model=None,  # Unknown until connected
-                                is_initialized=False,
                             )
                             self._mdns_devices[serial] = available_device
                             logger.info(

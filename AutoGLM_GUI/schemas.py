@@ -305,8 +305,7 @@ class DeviceResponse(BaseModel):
     connection_type: str
     state: str
     is_available_only: bool
-    agent: AgentStatusResponse | None = None  # 新增
-    is_initialized: bool  # 向后兼容(废弃但保留)
+    agent: AgentStatusResponse | None = None
 
 
 class DeviceListResponse(BaseModel):

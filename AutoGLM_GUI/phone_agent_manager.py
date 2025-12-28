@@ -175,13 +175,6 @@ class PhoneAgentManager:
                 )
                 self._states[device_id] = AgentState.IDLE
 
-                # Sync with DeviceManager
-                from AutoGLM_GUI.device_manager import DeviceManager
-
-                DeviceManager.get_instance().update_initialization_status(
-                    device_id, True
-                )
-
                 logger.info(f"Agent initialized for device {device_id}")
                 return agent
 
@@ -305,11 +298,6 @@ class PhoneAgentManager:
             # Remove metadata
             self._metadata.pop(device_id, None)
             self._states.pop(device_id, None)
-
-            # Sync with DeviceManager
-            from AutoGLM_GUI.device_manager import DeviceManager
-
-            DeviceManager.get_instance().update_initialization_status(device_id, False)
 
             logger.info(f"Agent destroyed for device {device_id}")
 
@@ -522,8 +510,6 @@ class PhoneAgentManager:
         """
         Find agent device_id by hardware serial (connection switching support).
 
-        Delegates to DeviceManager.get_agent_by_serial().
-
         Args:
             serial: Hardware serial number
 
@@ -531,8 +517,22 @@ class PhoneAgentManager:
             Optional[str]: device_id of initialized agent, or None
         """
         from AutoGLM_GUI.device_manager import DeviceManager
+        from AutoGLM_GUI.state import agents
 
-        return DeviceManager.get_instance().get_agent_by_serial(serial)
+        with self._manager_lock:
+            # Get device by serial from DeviceManager
+            device_manager = DeviceManager.get_instance()
+            device = device_manager._devices.get(serial)
+
+            if not device:
+                return None
+
+            # Check all connections for initialized agents
+            for conn in device.connections:
+                if conn.device_id in agents:
+                    return conn.device_id
+
+            return None
 
     # ==================== Introspection ====================
 
