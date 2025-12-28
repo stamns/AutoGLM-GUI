@@ -231,7 +231,7 @@ jobs:
 
   build-linux:
     name: Build for Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 for better GLIBC compatibility
 
     steps:
       - name: Checkout code
