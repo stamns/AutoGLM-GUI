@@ -63,10 +63,11 @@ def chat(device_id: str, message: str) -> Dict[str, Any]:
             model_name=effective_config.model_name,
         )
 
-        # Create agent config with device_id
+        # Create agent config with device_id and MCP-specific 5-step limit
         agent_config = AgentConfig(
             device_id=device_id,
             lang="cn",  # Default language
+            max_steps=5,  # MCP-specific step limit
         )
 
         try:
@@ -80,11 +81,34 @@ def chat(device_id: str, message: str) -> Dict[str, Any]:
     # 使用上下文管理器获取 agent（自动管理锁）
     try:
         with manager.use_agent(device_id, timeout=None) as agent:
-            result = agent.run(message)
-            steps = agent.step_count
-            agent.reset()
+            # Temporarily override max_steps for MCP (thread-safe within device lock)
+            original_max_steps = agent.agent_config.max_steps
+            agent.agent_config.max_steps = 5
 
-            return {"result": result, "steps": steps, "success": True}
+            try:
+                # Reset agent before each chat to ensure clean state
+                agent.reset()
+
+                result = agent.run(message)
+                steps = agent.step_count
+
+                # Check if 5-step MCP limit was reached
+                if steps >= 5 and result == "Max steps reached":
+                    return {
+                        "result": (
+                            "已达到 MCP 最大步数限制（5步）。任务可能未完成，"
+                            "建议将任务拆分为更小的子任务。"
+                        ),
+                        "steps": 5,
+                        "success": False,
+                    }
+
+                return {"result": result, "steps": steps, "success": True}
+
+            finally:
+                # Restore original max_steps
+                agent.agent_config.max_steps = original_max_steps
+
     except DeviceBusyError:
         raise RuntimeError(f"Device {device_id} is busy. Please wait.")
     except Exception as e:
