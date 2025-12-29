@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from fastmcp import FastMCP
 
 from AutoGLM_GUI.logger import logger
+from AutoGLM_GUI.prompts import MCP_SYSTEM_PROMPT_ZH
 
 # 创建 MCP 服务器实例
 mcp = FastMCP("AutoGLM-GUI MCP Server")
@@ -63,11 +64,12 @@ def chat(device_id: str, message: str) -> Dict[str, Any]:
             model_name=effective_config.model_name,
         )
 
-        # Create agent config with device_id and MCP-specific 5-step limit
+        # Create agent config with device_id, MCP-specific 5-step limit, and MCP prompt
         agent_config = AgentConfig(
             device_id=device_id,
             lang="cn",  # Default language
             max_steps=5,  # MCP-specific step limit
+            system_prompt=MCP_SYSTEM_PROMPT_ZH,  # MCP-specific Fail-Fast prompt
         )
 
         try:
