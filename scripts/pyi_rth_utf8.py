@@ -1,11 +1,18 @@
 """
-PyInstaller Runtime Hook - Force UTF-8 encoding on Windows
+PyInstaller Runtime Hook - Force UTF-8 encoding for stdout/stderr
 
 This file is executed by PyInstaller BEFORE the main script,
 at the earliest possible moment, ensuring UTF-8 encoding is set
-before any user code runs.
+for I/O streams.
 
-Reference: https://pyinstaller.org/en/stable/hooks.html#understanding-pyi-rth-hooks
+IMPORTANT: UTF-8 mode is enabled via build-time OPTIONS in autoglm.spec:
+    [('X utf8_mode=1', None, 'OPTION')]
+
+This hook only handles stdout/stderr reconfiguration for extra safety.
+
+Reference:
+- https://pyinstaller.org/en/stable/hooks.html#understanding-pyi-rth-hooks
+- https://github.com/pyinstaller/pyinstaller/discussions/9065
 """
 
 import sys
@@ -13,11 +20,15 @@ import os
 
 # Only apply on Windows
 if sys.platform == "win32":
-    # Set environment variable for any subprocess
+    # NOTE: PYTHONUTF8 environment variable is INEFFECTIVE for PyInstaller 6.9+
+    # UTF-8 mode is now controlled by build-time OPTIONS in spec file
+    # See: https://github.com/pyinstaller/pyinstaller/discussions/9065
+
+    # Set for any subprocess spawned by the application
     os.environ["PYTHONIOENCODING"] = "utf-8"
 
     # Reconfigure stdout and stderr to UTF-8
-    # This is the official Python 3.7+ way
+    # This is additional safety for console output
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")

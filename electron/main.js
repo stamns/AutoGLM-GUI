@@ -228,7 +228,11 @@ async function startBackend() {
   // 配置环境变量
   const env = {
     ...process.env,
-    PYTHONIOENCODING: 'utf-8'  // 强制 Python 使用 UTF-8 编码
+    // NOTE: PYTHONUTF8 is ONLY effective in dev mode (running Python script directly)
+    // For PyInstaller-frozen backend, UTF-8 mode is set via build-time OPTIONS in autoglm.spec
+    // See: https://github.com/pyinstaller/pyinstaller/discussions/9065
+    PYTHONUTF8: '1',            // 启用 Python UTF-8 模式 (仅开发模式有效)
+    PYTHONIOENCODING: 'utf-8'   // 强制 stdin/stdout/stderr 使用 UTF-8 编码
   };
 
   if (!isDev) {

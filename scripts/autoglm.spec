@@ -91,7 +91,11 @@ pyz = PYZ(
 exe = EXE(
     pyz,
     a.scripts,
-    [],
+    # PyInstaller OPTIONS: 启用 UTF-8 模式 (PEP 540)
+    # 注意: PyInstaller 6.9+ 不再受 PYTHONUTF8 环境变量影响
+    # 必须在打包时通过 OPTIONS 机制永久启用
+    # 参考: https://pyinstaller.org/en/v6.9.0/CHANGES.html
+    [('X utf8_mode=1', None, 'OPTION')],
     exclude_binaries=True,
     name='autoglm-gui',
     debug=False,
