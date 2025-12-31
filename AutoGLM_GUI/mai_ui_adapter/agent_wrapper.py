@@ -289,4 +289,3 @@ class _DummyModelClient:
             "MAIUIPhoneAgent handles model calls internally. "
             "Do not call model_client.request() directly."
         )
-

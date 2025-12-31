@@ -4,6 +4,7 @@ This module provides the layered agent API endpoint that uses
 a decision model for planning and autoglm-phone for execution.
 """
 
+import asyncio
 import json
 from typing import Any
 
@@ -122,20 +123,8 @@ PLANNER_INSTRUCTIONS = """## 核心目标
 # ==================== 工具定义 ====================
 
 
-@function_tool
-def list_devices() -> str:
-    """
-    获取所有连接的 ADB 设备列表。
-
-    返回设备信息包括:
-    - id: 设备标识符，用于 chat 工具调用
-    - model: 设备型号
-    - status: 连接状态
-    - connection_type: 连接类型 (usb/wifi/remote)
-
-    Returns:
-        JSON 格式的设备列表
-    """
+def _sync_list_devices() -> str:
+    """同步实现：获取所有连接的 ADB 设备列表。"""
     from AutoGLM_GUI.api.devices import _build_device_response_with_agent
     from AutoGLM_GUI.device_manager import DeviceManager
     from AutoGLM_GUI.phone_agent_manager import PhoneAgentManager
@@ -161,23 +150,24 @@ def list_devices() -> str:
 
 
 @function_tool
-def chat(device_id: str, message: str) -> str:
+async def list_devices() -> str:
     """
-    向指定设备的 Phone Agent 发送子任务指令。
+    获取所有连接的 ADB 设备列表。
 
-    Phone Agent 是一个视觉模型，能够看到手机屏幕并执行操作。
-    每次调用会执行一个原子化的子任务（最多 5 步操作）。
-
-    Args:
-        device_id: 设备标识符，从 list_devices 获取
-        message: 子任务指令，例如 "打开微信"、"点击搜索按钮"
+    返回设备信息包括:
+    - id: 设备标识符，用于 chat 工具调用
+    - model: 设备型号
+    - status: 连接状态
+    - connection_type: 连接类型 (usb/wifi/remote)
 
     Returns:
-        JSON 格式的执行结果，包含:
-        - result: 执行结果描述
-        - steps: 执行的步数
-        - success: 是否成功
+        JSON 格式的设备列表
     """
+    return await asyncio.to_thread(_sync_list_devices)
+
+
+def _sync_chat(device_id: str, message: str) -> str:
+    """同步实现：向指定设备的 Phone Agent 发送子任务指令。"""
     from AutoGLM_GUI.exceptions import DeviceBusyError
     from AutoGLM_GUI.phone_agent_manager import PhoneAgentManager
     from AutoGLM_GUI.prompts import MCP_SYSTEM_PROMPT_ZH
@@ -209,7 +199,9 @@ def chat(device_id: str, message: str) -> str:
 
                 # 检查是否达到步数限制
                 if steps >= MCP_MAX_STEPS and result == "Max steps reached":
-                    context_json = json.dumps(agent.context, ensure_ascii=False, indent=2)
+                    context_json = json.dumps(
+                        agent.context, ensure_ascii=False, indent=2
+                    )
                     return json.dumps(
                         {
                             "result": f"⚠️ 已达到最大步数限制（{MCP_MAX_STEPS}步）。视觉模型可能遇到了困难，任务未完成。\n\n执行历史:\n{context_json}\n\n建议: 请重新规划任务或将其拆分为更小的子任务。",
@@ -252,6 +244,27 @@ def chat(device_id: str, message: str) -> str:
             },
             ensure_ascii=False,
         )
+
+
+@function_tool
+async def chat(device_id: str, message: str) -> str:
+    """
+    向指定设备的 Phone Agent 发送子任务指令。
+
+    Phone Agent 是一个视觉模型，能够看到手机屏幕并执行操作。
+    每次调用会执行一个原子化的子任务（最多 5 步操作）。
+
+    Args:
+        device_id: 设备标识符，从 list_devices 获取
+        message: 子任务指令，例如 "打开微信"、"点击搜索按钮"
+
+    Returns:
+        JSON 格式的执行结果，包含:
+        - result: 执行结果描述
+        - steps: 执行的步数
+        - success: 是否成功
+    """
+    return await asyncio.to_thread(_sync_chat, device_id, message)
 
 
 # ==================== Agent 初始化 ====================
@@ -317,7 +330,7 @@ class LayeredAgentRequest(BaseModel):
 
 
 @router.post("/api/layered-agent/chat")
-def layered_agent_chat(request: LayeredAgentRequest):
+async def layered_agent_chat(request: LayeredAgentRequest):
     """
     Layered agent chat API with streaming execution steps.
 
