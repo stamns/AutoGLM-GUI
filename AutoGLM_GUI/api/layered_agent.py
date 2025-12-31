@@ -7,7 +7,7 @@ a decision model for planning and autoglm-phone for execution.
 import json
 from typing import Any
 
-from agents import Agent, Runner, function_tool
+from agents import Agent, Runner, SQLiteSession, function_tool
 from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -18,6 +18,28 @@ from AutoGLM_GUI.config_manager import config_manager
 from AutoGLM_GUI.logger import logger
 
 router = APIRouter()
+
+# ==================== Session 管理 ====================
+# 存储每个 session_id 对应的 SQLiteSession（内存模式）
+_sessions: dict[str, SQLiteSession] = {}
+
+
+def _get_or_create_session(session_id: str) -> SQLiteSession:
+    """获取或创建指定 session_id 的内存 session."""
+    if session_id not in _sessions:
+        # 使用 session_id 作为会话名称创建 session
+        _sessions[session_id] = SQLiteSession(session_id)
+        logger.info(f"[LayeredAgent] Created new session: {session_id}")
+    return _sessions[session_id]
+
+
+def _clear_session(session_id: str) -> bool:
+    """清除指定 session_id 的 session."""
+    if session_id in _sessions:
+        del _sessions[session_id]
+        logger.info(f"[LayeredAgent] Cleared session: {session_id}")
+        return True
+    return False
 
 
 def get_planner_model() -> str:
@@ -41,6 +63,7 @@ PLANNER_INSTRUCTIONS = """## 核心目标
 下达明确的 UI 动作指令。
 - ✅ "点击'设置'图标。"
 - ✅ "向下滑动屏幕。"
+- ✅ "打开微信。"
 
 ### 2. 如果你需要"获取信息" (To Read/Extract)
 你必须通过**提问**的方式，让视觉模型在对话中把信息"念"给你听。
@@ -186,9 +209,10 @@ def chat(device_id: str, message: str) -> str:
 
                 # 检查是否达到步数限制
                 if steps >= MCP_MAX_STEPS and result == "Max steps reached":
+                    context_json = json.dumps(agent.context, ensure_ascii=False, indent=2)
                     return json.dumps(
                         {
-                            "result": f"⚠️ 已达到最大步数限制（{MCP_MAX_STEPS}步）。视觉模型可能遇到了困难，任务未完成。\n\n执行历史:\n{agent.get_context()}\n\n建议: 请重新规划任务或将其拆分为更小的子任务。",
+                            "result": f"⚠️ 已达到最大步数限制（{MCP_MAX_STEPS}步）。视觉模型可能遇到了困难，任务未完成。\n\n执行历史:\n{context_json}\n\n建议: 请重新规划任务或将其拆分为更小的子任务。",
                             "steps": MCP_MAX_STEPS,
                             "success": False,
                         },
@@ -289,6 +313,7 @@ class LayeredAgentRequest(BaseModel):
 
     message: str
     device_id: str | None = None
+    session_id: str | None = None  # 用于保持对话上下文，前端可传入 deviceId
 
 
 @router.post("/api/layered-agent/chat")
@@ -315,11 +340,17 @@ def layered_agent_chat(request: LayeredAgentRequest):
             # Ensure agent is initialized
             agent = _ensure_agent()
 
-            # Run the agent with streaming
+            # 获取或创建 session 以保持对话上下文
+            # 优先使用 session_id，其次使用 device_id，最后使用默认值
+            session_id = request.session_id or request.device_id or "default"
+            session = _get_or_create_session(session_id)
+
+            # Run the agent with streaming and session for memory
             result = Runner.run_streamed(
                 agent,
                 request.message,
                 max_turns=50,
+                session=session,
             )
 
             current_tool_call: dict[str, Any] | None = None
@@ -519,3 +550,24 @@ def layered_agent_chat(request: LayeredAgentRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+class ResetSessionRequest(BaseModel):
+    """Request for resetting a session."""
+
+    session_id: str
+
+
+@router.post("/api/layered-agent/reset")
+def reset_session(request: ResetSessionRequest):
+    """
+    Reset/clear a session to forget conversation history.
+
+    This should be called when the user clicks "reset" button
+    or refreshes the page.
+    """
+    cleared = _clear_session(request.session_id)
+    return {
+        "success": True,
+        "message": f"Session {request.session_id} {'cleared' if cleared else 'not found (already empty)'}",
+    }

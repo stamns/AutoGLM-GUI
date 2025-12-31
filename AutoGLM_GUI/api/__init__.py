@@ -16,10 +16,10 @@ from AutoGLM_GUI.version import APP_VERSION
 
 from . import (
     agents,
-    chatkit,
     control,
     devices,
     dual_model,
+    layered_agent,
     mcp,
     media,
     metrics,
@@ -90,7 +90,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(agents.router)
-    app.include_router(chatkit.router)
+    app.include_router(layered_agent.router)
     app.include_router(devices.router)
     app.include_router(control.router)
     app.include_router(media.router)

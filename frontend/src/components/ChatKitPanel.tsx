@@ -364,6 +364,7 @@ export function ChatKitPanel({
         body: JSON.stringify({
           message: inputValue,
           device_id: deviceId,
+          session_id: deviceId, // 使用 deviceId 作为 session 标识，保持对话上下文
         }),
         signal: controller.signal,
       });
@@ -607,7 +608,7 @@ export function ChatKitPanel({
     }
   }, [t]);
 
-  const handleReset = React.useCallback(() => {
+  const handleReset = React.useCallback(async () => {
     // Abort any ongoing request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -619,7 +620,23 @@ export function ChatKitPanel({
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-  }, []);
+
+    // 清除后端的对话历史 session
+    try {
+      await fetch('/api/layered-agent/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: deviceId,
+        }),
+      });
+    } catch (e) {
+      // 忽略 reset 失败，不影响用户体验
+      console.warn('Failed to reset backend session:', e);
+    }
+  }, [deviceId]);
 
   const handleInputKeyDown = (
     event: React.KeyboardEvent<HTMLTextAreaElement>
