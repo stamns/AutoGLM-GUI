@@ -6,23 +6,19 @@ making it easy to add new agent types without modifying existing code.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict
+from typing import TYPE_CHECKING, Callable, Dict
 
 from AutoGLM_GUI.logger import logger
+from AutoGLM_GUI.types import AgentSpecificConfig
+
+from .protocols import BaseAgent
 
 if TYPE_CHECKING:
-    from phone_agent.agent import AgentConfig, StepResult
+    from phone_agent import PhoneAgent
+    from phone_agent.agent import AgentConfig
     from phone_agent.model import ModelConfig
 
-    # Base agent interface (protocol)
-    class BaseAgent:
-        """Common interface that all agents must implement."""
-
-        def run(self, task: str) -> str: ...
-        def step(self, task: str | None) -> StepResult: ...
-        def reset(self) -> None: ...
-        @property
-        def step_count(self) -> int: ...
+    from .mai_adapter import MAIAgentAdapter
 
 
 # Agent registry: agent_type -> (creator_function, config_schema)
@@ -58,7 +54,7 @@ def create_agent(
     agent_type: str,
     model_config: "ModelConfig",
     agent_config: "AgentConfig",
-    agent_specific_config: dict[str, Any],
+    agent_specific_config: AgentSpecificConfig,
     takeover_callback: Callable | None = None,
     confirmation_callback: Callable | None = None,
 ) -> "BaseAgent":
@@ -118,11 +114,10 @@ def is_agent_type_registered(agent_type: str) -> bool:
 def _create_phone_agent(
     model_config: "ModelConfig",
     agent_config: "AgentConfig",
-    agent_specific_config: dict[str, Any],
+    agent_specific_config: AgentSpecificConfig,
     takeover_callback: Callable | None = None,
     confirmation_callback: Callable | None = None,
-) -> "BaseAgent":
-    """Create PhoneAgent instance."""
+) -> "PhoneAgent":
     from phone_agent import PhoneAgent
 
     return PhoneAgent(
@@ -136,11 +131,10 @@ def _create_phone_agent(
 def _create_mai_agent(
     model_config: "ModelConfig",
     agent_config: "AgentConfig",
-    agent_specific_config: dict[str, Any],
+    agent_specific_config: AgentSpecificConfig,
     takeover_callback: Callable | None = None,
     confirmation_callback: Callable | None = None,
-) -> "BaseAgent":
-    """Create MAI Agent adapter instance."""
+) -> "MAIAgentAdapter":
     from .mai_adapter import MAIAgentAdapter, MAIAgentConfig
 
     # Build MAI config from dict
