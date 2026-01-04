@@ -318,14 +318,35 @@ def _create_planner_agent(client: AsyncOpenAI) -> Agent[Any]:
 # Global agent instance (lazy initialized)
 _client: AsyncOpenAI | None = None
 _agent: Agent[Any] | None = None
+_cached_config_hash: str | None = None
+
+
+def _compute_config_hash() -> str:
+    import hashlib
+
+    config = config_manager.get_effective_config()
+    config_str = config.model_dump_json()
+    return hashlib.md5(config_str.encode()).hexdigest()
 
 
 def _ensure_agent() -> Agent[Any]:
-    """Ensure the planner agent is initialized."""
-    global _client, _agent
-    if _agent is None:
+    global _client, _agent, _cached_config_hash
+
+    current_hash = _compute_config_hash()
+
+    if _agent is None or _cached_config_hash != current_hash:
+        if _agent is not None and _cached_config_hash != current_hash:
+            logger.info(
+                f"[LayeredAgent] Config changed (hash: {_cached_config_hash} -> {current_hash}), reloading agent..."
+            )
+
         _client = _setup_openai_client()
         _agent = _create_planner_agent(_client)
+        _cached_config_hash = current_hash
+        logger.info(
+            f"[LayeredAgent] Agent initialized/reloaded with config hash: {current_hash}"
+        )
+
     return _agent
 
 
