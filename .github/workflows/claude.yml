@@ -47,16 +47,16 @@ jobs:
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@v1
+        uses: suyiiyii/claude-code-action@latest
         with:
+          show_full_output: "true" 
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-
           additional_permissions: |
             actions: read
 
           claude_args: '--allowed-tools Bash(gh pr:*) --permission-mode bypassPermissions'
 
-          prompt: |
+          custom_instructions: |
             # 高级任务执行指南
 
             ## 核心原则
