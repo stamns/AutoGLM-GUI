@@ -74,6 +74,14 @@ export const en = {
     directConnectTab: 'Direct Connect',
     directConnectNote:
       'Note: First-time connection requires wireless pairing in the "Pair Device" tab',
+    emulatorPreset: 'Quick Connect (Emulator)',
+    emulatorMumu: 'MuMu',
+    emulatorNox: 'NoxPlayer',
+    emulatorLdplayer: 'LDPlayer',
+    emulatorBluestacks: 'BlueStacks',
+    emulatorCustom: 'Custom',
+    emulatorNote:
+      'Select preset above to auto-fill IP and port (for emulators), or manually enter IP and port for physical devices. Make sure ADB debugging is enabled in device settings.',
     pairTab: 'Pair Device',
     pairingCode: 'Pairing Code',
     pairingPort: 'Pairing Port',
