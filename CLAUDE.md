@@ -203,7 +203,7 @@ If automatic installation fails, you can install manually:
 
 ### License Notice
 
-ADB Keyboard uses the **GPL-2.0** license, which differs from AutoGLM-GUI's MIT license.
+ADB Keyboard uses the **GPL-2.0** license, which differs from AutoGLM-GUI's Apache 2.0 license.
 The APK file is bundled as an independent third-party component. When using it, you must comply with GPL-2.0 terms.
 
 See: `AutoGLM_GUI/resources/apks/ADBKeyBoard.LICENSE.txt`
