@@ -203,7 +203,7 @@ If automatic installation fails, you can install manually:
 
 ### License Notice
 
-ADB Keyboard uses the **GPL-2.0** license, which differs from AutoGLM-GUI's MIT license.
+ADB Keyboard uses the **GPL-2.0** license, which differs from AutoGLM-GUI's Apache 2.0 license.
 The APK file is bundled as an independent third-party component. When using it, you must comply with GPL-2.0 terms.
 
 See: `AutoGLM_GUI/resources/apks/ADBKeyBoard.LICENSE.txt`
@@ -292,7 +292,6 @@ See: `AutoGLM_GUI/resources/apks/ADBKeyBoard.LICENSE.txt`
   - Automatic file logging with rotation (100MB) and retention (7 days)
   - Separate error log files (50MB rotation, 30 days retention)
   - Configurable via CLI parameters (--log-level, --log-file, --no-log-file)
-  - Used throughout AutoGLM_GUI/ (phone_agent/ uses original print statements)
 - **`platform_utils.py`**: Cross-platform subprocess management
   - Async command execution (event loop safe)
   - Windows compatibility (subprocess.run vs asyncio)
@@ -502,7 +501,7 @@ AutoGLM-GUI can be packaged as a standalone desktop application using Electron, 
 ### Logging System
 
 - **Library**: loguru - modern Python logging with zero configuration
-- **Scope**: Only AutoGLM_GUI/ directory (phone_agent/ keeps original print statements for compatibility)
+- **Scope**: AutoGLM_GUI/ directory
 - **Console Output**:
   - Colorized output with timestamps, log levels, and source locations
   - Default level: INFO (adjustable via --log-level)
@@ -650,8 +649,7 @@ scrcpy-server-v3.3.3   # Scrcpy server binary (bundled)
 8. **ADB Command Execution**: Always use `platform_utils.py` functions instead of direct subprocess calls
 9. **Device ID vs Serial**: Remember `device_id` changes with connection type, `serial` is stable
 10. **Concurrent Execution**: PhoneAgentManager prevents concurrent tasks on same device - respect the locks
-11. **Legacy Code**: `phone_agent` and `mai_agent` directories are third-party legacy code kept for reference only - use internal agents in `AutoGLM_GUI/agents/`
-12. **Respecting Domain Boundaries**:
+11. **Respecting Domain Boundaries**:
     - PhoneAgentManager should only deal with device_id (not serial)
     - DeviceManager should only deal with device connections (not agents)
     - API layer coordinates between domains using public interfaces only
@@ -711,7 +709,6 @@ scrcpy-server-v3.3.3   # Scrcpy server binary (bundled)
    - Downloads artifacts from Actions tab
 
 ### Important Notes
-- **Legacy Directories**: `phone_agent` and `mai_agent` are third-party code, do NOT modify
 - **Encoding**: Use PyInstaller runtime hook for Windows UTF-8, not application code
 - **Resources**: Always check `sys._MEIPASS` exists in PyInstaller environment
 - **ADB**: Use `AutoGLM_GUI/platform_utils.py` for executing commands
