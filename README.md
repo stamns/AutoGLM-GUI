@@ -460,6 +460,48 @@ docker run -d -p 9000:8000 \
 curl http://localhost:8000/api/health
 ```
 
+## 🤝 如何贡献
+
+我们热烈欢迎社区贡献！无论是修复 bug、添加新功能、改进文档，还是分享使用经验，都对项目有重要价值。
+
+### 🎯 快速开始贡献
+
+1. **查看置顶 Issue** - [🎯 Start Here: 如何贡献 / 认领任务 / 本地跑起来](https://github.com/suyiiyii/AutoGLM-GUI/issues/170)
+2. **阅读贡献指南** - 详细步骤请参考 [CONTRIBUTING.md](./CONTRIBUTING.md)
+3. **认领任务** - 在感兴趣的 Issue 下评论 `/assign me`
+
+### 💡 贡献方式
+
+- 🐛 **修复 Bug** - 查找标记为 `bug` 的 Issue
+- ✨ **添加功能** - 实现标记为 `enhancement` 的需求
+- 📖 **改进文档** - 修正错误、补充说明、添加示例
+- 🧪 **添加测试** - 提升代码质量和测试覆盖率
+- 🌍 **翻译文档** - 帮助更多语言的用户使用
+
+### 🏷️ 新手友好任务
+
+如果你是第一次贡献开源项目，可以从这些任务开始：
+
+- 查找标记为 [`good first issue`](https://github.com/suyiiyii/AutoGLM-GUI/labels/good%20first%20issue) 的 Issue
+- 改进文档（修正拼写错误、补充说明）
+- 测试软件并报告使用体验
+
+### 📚 参考资源
+
+| 文档 | 说明 |
+|------|------|
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 完整的贡献指南（环境配置、开发流程、PR 规范） |
+| [CLAUDE.md](./CLAUDE.md) | 技术架构文档（代码结构、关键实现细节） |
+| [Issues](https://github.com/suyiiyii/AutoGLM-GUI/issues) | 查看和认领任务 |
+
+### 💬 交流讨论
+
+- 💭 在 Issue 中讨论想法和问题
+- 🎮 加入 [QQ 交流群](https://qm.qq.com/q/J5eAs9tn0W)
+- 📝 [创建新 Issue](https://github.com/suyiiyii/AutoGLM-GUI/issues/new/choose) 报告问题或提出建议
+
+感谢每一位贡献者，你们让 AutoGLM-GUI 变得更好！🎉
+
 ## 📝 开源协议
 
 Apache License 2.0
