@@ -23,8 +23,11 @@ directories:
   buildResources: build
 
 files:
-  - "**/*"
-  - "!node_modules"
+  - "main.js"
+  - "preload.js"
+  - "afterPack.js"
+  - "package.json"
+  # 不显式配置 node_modules，让 electron-builder 自动从 dependencies 中包含运行时依赖
 
 extraResources:
   - from: ../resources/backend
